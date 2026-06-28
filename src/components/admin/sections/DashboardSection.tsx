@@ -3,29 +3,66 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import Icon from '@/components/ui/icon';
 import StatusBadge from '../StatusBadge';
 import {
-  mockOrders, mockMasters, mockParts, mockReports,
-} from '@/lib/mockData';
-import { OrderStatus } from '@/lib/types';
+  ordersService, mastersService, partsService, clientsService, reportsService,
+} from '@/lib/api';
+import { Order, Master, Part, Client, Report, OrderStatus } from '@/lib/types';
 
-const stats = [
-  { label: 'Активных заказов', value: '34', icon: 'ClipboardList', trend: '+12%', color: 'text-primary' },
-  { label: 'Выручка за месяц', value: '487 600 ₽', icon: 'Wallet', trend: '+8%', color: 'text-emerald-400' },
-  { label: 'Клиентов в базе', value: '1 248', icon: 'Users', trend: '+24', color: 'text-accent' },
-  { label: 'Свободных мастеров', value: '2', icon: 'Wrench', trend: 'из 5', color: 'text-amber-400' },
-];
-
+const money = (n: number) => `${n.toLocaleString('ru')} ₽`;
 const statusFlow: OrderStatus[] = ['new', 'diagnostics', 'repair', 'waiting', 'done', 'issued'];
-const statusCounts: Record<string, number> = { new: 8, diagnostics: 6, repair: 11, waiting: 5, done: 3, issued: 1 };
 
 const DashboardSection = () => {
   const [progress, setProgress] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setProgress(72), 200); return () => clearTimeout(t); }, []);
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [masters, setMasters] = useState<Master[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
 
-  const maxLoad = Math.max(...mockMasters.map((m) => m.activeOrders), 1);
-  const lowStock = mockParts.filter((p) => p.stock < p.minStock);
+  useEffect(() => {
+    Promise.all([
+      ordersService.getAll(), mastersService.getAll(), partsService.getAll(),
+      clientsService.getAll(), reportsService.getAll(),
+    ]).then(([o, m, p, c, r]) => {
+      setOrders(o as Order[]); setMasters(m as Master[]); setParts(p as Part[]);
+      setClients(c as Client[]); setReports(r as Report[]); setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => { const t = setTimeout(() => setProgress(72), 300); return () => clearTimeout(t); }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  const active = orders.filter((o) => !['issued', 'done'].includes(o.status)).length;
+  const revenue = orders.reduce((s, o) => s + Number(o.price || 0), 0);
+  const freeMasters = masters.filter((m) => m.status === 'available').length;
+  const lowStock = parts.filter((p) => Number(p.stock) < Number(p.min_stock));
+  const maxLoad = Math.max(...masters.map((m) => Number(m.active_orders)), 1);
+
+  const statusCounts: Record<string, number> = {};
+  statusFlow.forEach((s) => { statusCounts[s] = orders.filter((o) => o.status === s).length; });
+  const totalOrders = orders.length || 1;
+
+  const stats = [
+    { label: 'Активных заказов', value: String(active), icon: 'ClipboardList', trend: `всего ${orders.length}`, color: 'text-primary' },
+    { label: 'Сумма заказов', value: money(revenue), icon: 'Wallet', trend: '+8%', color: 'text-emerald-400' },
+    { label: 'Клиентов в базе', value: String(clients.length), icon: 'Users', trend: 'активных', color: 'text-accent' },
+    { label: 'Свободных мастеров', value: String(freeMasters), icon: 'Wrench', trend: `из ${masters.length}`, color: 'text-amber-400' },
+  ];
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -60,19 +97,15 @@ const DashboardSection = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {statusFlow.map((st) => {
-              const count = statusCounts[st];
-              const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
-              return (
-                <div key={st} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <StatusBadge value={st} />
-                    <span className="font-medium text-muted-foreground">{count} заказов</span>
-                  </div>
-                  <Progress value={(count / total) * 100} className="h-2" />
+            {statusFlow.map((st) => (
+              <div key={st} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <StatusBadge value={st} />
+                  <span className="font-medium text-muted-foreground">{statusCounts[st]} заказов</span>
                 </div>
-              );
-            })}
+                <Progress value={(statusCounts[st] / totalOrders) * 100} className="h-2" />
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -114,7 +147,7 @@ const DashboardSection = () => {
                 <TabsTrigger value="rating">Рейтинг</TabsTrigger>
               </TabsList>
               <TabsContent value="load" className="space-y-4">
-                {mockMasters.map((m) => (
+                {masters.map((m) => (
                   <div key={m.id} className="flex items-center gap-3">
                     <Avatar className="w-9 h-9 shrink-0">
                       <AvatarFallback className="text-xs bg-secondary">{m.name.split(' ').map((w) => w[0]).join('')}</AvatarFallback>
@@ -125,20 +158,20 @@ const DashboardSection = () => {
                         <StatusBadge value={m.status} />
                       </div>
                       <div className="flex items-center gap-2">
-                        <Progress value={(m.activeOrders / maxLoad) * 100} className="h-1.5" />
-                        <span className="text-xs text-muted-foreground w-16 text-right">{m.activeOrders} зак.</span>
+                        <Progress value={(Number(m.active_orders) / maxLoad) * 100} className="h-1.5" />
+                        <span className="text-xs text-muted-foreground w-16 text-right">{m.active_orders} зак.</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </TabsContent>
               <TabsContent value="rating" className="space-y-3">
-                {[...mockMasters].sort((a, b) => b.rating - a.rating).map((m, i) => (
+                {[...masters].sort((a, b) => Number(b.rating) - Number(a.rating)).map((m, i) => (
                   <div key={m.id} className="flex items-center gap-3 rounded-lg bg-secondary/40 px-3 py-2">
                     <span className="w-6 h-6 rounded-md gradient-brand text-primary-foreground text-xs font-bold flex items-center justify-center">{i + 1}</span>
                     <span className="text-sm font-medium flex-1">{m.name}</span>
                     <span className="inline-flex items-center gap-1 text-sm font-semibold">
-                      <Icon name="Star" size={14} className="text-amber-400 fill-amber-400" />{m.rating.toFixed(1)}
+                      <Icon name="Star" size={14} className="text-amber-400 fill-amber-400" />{Number(m.rating).toFixed(1)}
                     </span>
                   </div>
                 ))}
@@ -155,7 +188,7 @@ const DashboardSection = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {lowStock.map((p) => (
+              {lowStock.length === 0 ? <p className="text-sm text-muted-foreground">Все запасы в норме</p> : lowStock.map((p) => (
                 <div key={p.id} className="flex items-center justify-between text-sm">
                   <span className="truncate text-muted-foreground">{p.name}</span>
                   <span className="text-red-400 font-medium shrink-0 ml-2">{p.stock} шт</span>
@@ -171,7 +204,7 @@ const DashboardSection = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2.5">
-              {mockOrders.slice(0, 4).map((o) => (
+              {orders.slice(0, 4).map((o) => (
                 <div key={o.id} className="flex items-center justify-between text-sm">
                   <div className="min-w-0">
                     <p className="font-medium truncate">{o.number}</p>
@@ -185,9 +218,11 @@ const DashboardSection = () => {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
-        Последний отчёт: {mockReports[0].title} · выручка {mockReports[0].revenue.toLocaleString('ru')} ₽
-      </p>
+      {reports[0] && (
+        <p className="text-xs text-muted-foreground text-center">
+          Последний отчёт: {reports[0].title} · выручка {Number(reports[0].revenue).toLocaleString('ru')} ₽
+        </p>
+      )}
     </div>
   );
 };

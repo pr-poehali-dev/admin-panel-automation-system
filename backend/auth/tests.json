@@ -1,0 +1,6 @@
+{"tests": [
+  {"name": "Login success", "method": "POST", "path": "/", "body": {"email": "admin@techfix.ru", "password": "admin"}, "expectedStatus": 200, "expectedBody": {"token": "string"}, "bodyMatcher": "partial"},
+  {"name": "Wrong password", "method": "POST", "path": "/", "body": {"email": "admin@techfix.ru", "password": "wrong"}, "expectedStatus": 401},
+  {"name": "Missing fields", "method": "POST", "path": "/", "body": {"email": ""}, "expectedStatus": 400},
+  {"name": "CORS preflight", "method": "OPTIONS", "path": "/", "expectedStatus": 200}
+]}

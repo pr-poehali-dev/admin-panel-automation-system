@@ -4,10 +4,12 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  password?: string;
   role: Role;
   status: 'active' | 'blocked';
-  lastLogin: string;
-  avatar?: string;
+  phone: string;
+  position: string;
+  last_login: string;
 }
 
 export type OrderStatus = 'new' | 'diagnostics' | 'repair' | 'waiting' | 'done' | 'issued';
@@ -21,7 +23,10 @@ export interface Order {
   master: string;
   status: OrderStatus;
   price: number;
-  createdAt: string;
+  prepayment: number;
+  priority: string;
+  diagnosis: string;
+  created_at: string;
   deadline: string;
 }
 
@@ -30,10 +35,13 @@ export interface Client {
   name: string;
   phone: string;
   email: string;
-  ordersCount: number;
-  totalSpent: number;
+  address: string;
   type: 'individual' | 'company';
-  createdAt: string;
+  orders_count: number;
+  total_spent: number;
+  discount: number;
+  notes: string;
+  created_at: string;
 }
 
 export interface Device {
@@ -44,6 +52,9 @@ export interface Device {
   serial: string;
   client: string;
   status: 'in_service' | 'returned' | 'in_stock';
+  received_at: string;
+  condition: string;
+  accessories: string;
 }
 
 export interface Master {
@@ -51,10 +62,14 @@ export interface Master {
   name: string;
   specialization: string;
   phone: string;
-  activeOrders: number;
+  email: string;
+  active_orders: number;
+  completed_orders: number;
   rating: number;
-  completedOrders: number;
   status: 'available' | 'busy' | 'vacation';
+  experience_years: number;
+  salary: number;
+  hired_at: string;
 }
 
 export interface Service {
@@ -64,6 +79,8 @@ export interface Service {
   price: number;
   duration: string;
   popular: boolean;
+  description: string;
+  warranty_days: number;
 }
 
 export interface Part {
@@ -72,9 +89,11 @@ export interface Part {
   category: string;
   sku: string;
   price: number;
+  cost: number;
   stock: number;
-  minStock: number;
+  min_stock: number;
   supplier: string;
+  location: string;
 }
 
 export interface Report {
@@ -82,9 +101,12 @@ export interface Report {
   title: string;
   period: string;
   revenue: number;
+  expenses: number;
+  profit: number;
   orders: number;
+  avg_check: number;
   type: 'daily' | 'weekly' | 'monthly';
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Equipment {
@@ -93,6 +115,8 @@ export interface Equipment {
   inventory: string;
   location: string;
   condition: 'working' | 'maintenance' | 'broken';
-  assignedTo: string;
-  purchaseDate: string;
+  assigned_to: string;
+  purchase_date: string;
+  price: number;
+  last_service: string;
 }

@@ -1,0 +1,6 @@
+{"tests": [
+  {"name": "List orders", "method": "GET", "path": "/?entity=orders", "expectedStatus": 200},
+  {"name": "List clients", "method": "GET", "path": "/?entity=clients", "expectedStatus": 200},
+  {"name": "Unknown entity", "method": "GET", "path": "/?entity=foo", "expectedStatus": 400},
+  {"name": "CORS preflight", "method": "OPTIONS", "path": "/?entity=orders", "expectedStatus": 200}
+]}

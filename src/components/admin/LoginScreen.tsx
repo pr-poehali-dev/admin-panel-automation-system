@@ -9,14 +9,15 @@ import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 
 const LoginScreen = () => {
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const [email, setEmail] = useState('admin@techfix.ru');
   const [password, setPassword] = useState('admin');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!login(email, password)) {
-      toast.error('Неверный логин или пароль');
+    const error = await login(email, password);
+    if (error) {
+      toast.error(error);
     } else {
       toast.success('Добро пожаловать в TechFix!');
     }
@@ -60,8 +61,9 @@ const LoginScreen = () => {
                   <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9" placeholder="••••••" />
                 </div>
               </div>
-              <Button type="submit" className="w-full gradient-brand text-primary-foreground font-semibold hover:opacity-90 transition">
-                <Icon name="LogIn" size={18} className="mr-2" /> Войти в систему
+              <Button type="submit" disabled={loading} className="w-full gradient-brand text-primary-foreground font-semibold hover:opacity-90 transition">
+                <Icon name={loading ? 'Loader2' : 'LogIn'} size={18} className={loading ? 'mr-2 animate-spin' : 'mr-2'} />
+                {loading ? 'Вход...' : 'Войти в систему'}
               </Button>
             </form>
 
